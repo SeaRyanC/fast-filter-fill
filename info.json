@@ -1,0 +1,9 @@
+{
+  "name": "FastFilterFill",
+  "version": "0.5.0",
+  "title": "Fast Filter Fill",
+  "author": "SeaRyanC",
+  "contact": "http://github.com/SeaRyanC/",
+  "homepage": "http://github.com/SeaRyanC/fast-filter-fill",
+  "description": "Quickly duplicate filter settings in Cargo Wagons and other filterable containers"
+}

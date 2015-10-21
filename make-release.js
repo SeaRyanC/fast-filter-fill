@@ -1,6 +1,6 @@
 var fs = require('fs');
 
-var fileList = ['data.lua', 'control.lua', 'info.json']
+var fileList = ['control.lua', 'info.json']
 
 var data = fs.readFileSync('info.json', 'utf-8');
 var parsedData = JSON.parse(data);

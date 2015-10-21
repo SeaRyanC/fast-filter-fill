@@ -2,6 +2,8 @@
 
 A Factorio mod for managing container filters, logistic requests, and maybe other stuff later.
 
+## [Download Fast Filter Fill 0.5.0](https://github.com/SeaRyanC/fast-filter-fill/raw/master/releases/FastFilterFill_0.5.0.zip)
+
 ## Quickly Set Container Filters
 
 When you have a filterable container open (e.g. Cargo Wagon), buttons will appear in the UI to help you manage the filter settings of the inventory of that container. These buttons basically work like their equivalents in Excel.

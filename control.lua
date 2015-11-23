@@ -1,12 +1,6 @@
 require "defines"
 require "util"
 
--- Notes
--- Give yourself some items
--- /c game.local_player.insert{name="assembling-machine-3",count=100}
-
--- TODO: How to get the number of request slots?
-
 -- Name of the row headers we put in the UI
 local filterUiElementName = "FilterFillRow"
 local requestUiElementName = "RequestRow"
@@ -15,9 +9,14 @@ local requestUiElementName = "RequestRow"
 local Buttons = {}
 local dispatch = {}
 
+-- How many logistic request slots a requester chest has. Replace
+-- with a function once the API can tell us this
+-- TODO: How to get the number of request slots?
+local REQUEST_SLOTS = 10
+
 -- Initializes the world
 function startup()
-    (game or script).on_event(defines.events.on_tick, checkOpened)
+    script.on_event(defines.events.on_tick, checkOpened)
     initButtons()
 end
 
@@ -51,25 +50,7 @@ function initButtons()
     register('Requests', 'Fill', requests_fill)
     register('Requests', 'Blueprint', requests_blueprint)
 
-    if game ~= nil then
-        game.on_event(defines.events.on_gui_click, handleButton)
-    else
-        script.on_event(defines.events.on_gui_click, handleButton)
-    end
-end
-
--- All containers in the game seem to have 10 columns
-function getColumns(player)
-    return 10
-end
-
--- TODO: Implement Car, Tank when those get API support
-function getRows(player)
-    if player.opened.type == "cargo-wagon" then
-        return 3
-    else
-        return nil
-    end
+    script.on_event(defines.events.on_gui_click, handleButton)
 end
 
 -- TODO: Add Car, Tank when those get API support (or we get API support for detecting this programatically)
@@ -140,7 +121,7 @@ end
 -- Filtering: Clear all filters in the opened container
 function filter_clearAll(player)
     local op = player.opened;
-    local size = getRows(player) * getColumns(player)
+    local size = #player.opened.get_inventory(1)
     for i = 1, size do
         op.clear_filter(i)
     end
@@ -150,7 +131,7 @@ end
 -- contents of each cell
 function filter_setAll(player)
     local op = player.opened;
-    local size = getRows(player) * getColumns(player)
+    local size = #player.opened.get_inventory(1)
     for i = 1, size do
         local desired = getItemAtPosition(player, i)
         setFilter(player, desired, i)
@@ -163,7 +144,7 @@ end
 function filter_fillAll(player)
     -- Get the contents of the player's cursor stack, or the first cell
     local desired = (player.cursor_stack.valid_for_read and player.cursor_stack.name) or getItemOrFilterAtPosition(player, 1)
-    local size = getRows(player) * getColumns(player)
+    local size = #player.opened.get_inventory(1)
     local op = player.opened;
     for i = 1, size do
         local current = getItemAtPosition(player, i)
@@ -181,81 +162,81 @@ end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) to the right of it
 function filter_fillRight(player)
-    -- N.B. Assumes all filterable containers are rectangular
-    local columns = getColumns(player)
-    local rows = getRows(player)
+    local columns = 10
+    local size = #player.opened.get_inventory(1)
+    local rows = math.ceil(size / columns)
     for r = 1, rows do
         local desired = getItemOrFilterAtPosition(player, 1 + (r - 1) * columns)
         for c = 1, columns do
             local i = c + (r - 1) * columns
-            desired = getItemAtPosition(player, i) or desired
-            setFilter(player, desired, i)
+            if i <= size then
+                desired = getItemAtPosition(player, i) or desired
+                setFilter(player, desired, i)
+            end
         end
     end
 end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) below it
 function filter_fillDown(player)
-    -- N.B. Assumes all filterable containers are rectangular
-    local columns = getColumns(player)
-    local rows = getRows(player)
+    local columns = 10
+    local size = #player.opened.get_inventory(1)
+    local rows = math.ceil(size / columns)
     for c = 1, columns do
         local desired = getItemOrFilterAtPosition(player, c)
         for r = 1, rows do
             local i = c + (r - 1) * columns
-            desired = getItemAtPosition(player, i) or desired
-            setFilter(player, desired, c + (r - 1) * columns)
+            if i <= size then
+                desired = getItemAtPosition(player, i) or desired
+                setFilter(player, desired, c + (r - 1) * columns)
+            end
         end
     end
 end
 
 function multiply_filter(player, factor)
-    for i = 1, 100 do
+    local size = #player.opened.get_inventory(1)
+    for i = 1, REQUEST_SLOTS do
         local existing = player.opened.get_request_slot(i)
-        player.opened.set_request_slot({ name =  existing.name, count = math.floor(existing.count * factor) }, i)
+        if existing ~= nil then
+            player.opened.set_request_slot({ name =  existing.name, count = math.floor(existing.count * factor) }, i)
+        end
     end
 end
 
 function requests_x2(player)
-    pcall(multiply_filter, player, 2)
-    informUserToReopenChest(player)
+    multiply_filter(player, 2)
 end
 function requests_x5(player)
-    pcall(multiply_filter, player, 5)
-    informUserToReopenChest(player)
+    multiply_filter(player, 5)
 end
 function requests_x10(player)
-    pcall(multiply_filter, player, 10)
-    informUserToReopenChest(player)
+    multiply_filter(player, 10)
 end
 function requests_fill(player)
-    local inventorySize = 0
-    local inv = player.opened.get_inventory(1);
-
-    function findSize()
-        for i = 1, 1000 do
-            local dummy = inv[i]
-            inventorySize = i
-        end
-    end
-
-    pcall(findSize)
+    local inv = player.opened.get_inventory(1)
+    local inventorySize = #inv
 
     local totalStackRequests = 0
-    function findRequestTotal()
-        for i = 1, 1000 do
-            local item = player.opened.get_request_slot(i)
-            if item ~= nil then
-                totalStackRequests = totalStackRequests + item.count / game.item_prototypes[item.name].stack_size
-            end
+
+    -- Add up how many total stacks we need here
+    for i = 1, REQUEST_SLOTS do
+        local item = player.opened.get_request_slot(i)
+        if item ~= nil then
+            totalStackRequests = totalStackRequests + item.count / game.item_prototypes[item.name].stack_size
         end
     end
-    pcall(findRequestTotal)
 
     local factor = inventorySize / totalStackRequests
-
-    pcall(multiply_filter, player, factor)
-    informUserToReopenChest(player)
+    -- Go back and re-set each thing according to its rounded-up stack size
+    for i = 1, REQUEST_SLOTS do
+        local item = player.opened.get_request_slot(i)
+        if item ~= nil then
+            stacksToRequest = math.ceil(item.count / game.item_prototypes[item.name].stack_size)
+            numberToRequest = stacksToRequest * game.item_prototypes[item.name].stack_size
+            player.opened.set_request_slot({ name =  item.name, count = numberToRequest }, i)
+        end
+    end
 end
 
 function requests_blueprint(player)
@@ -272,34 +253,35 @@ function requests_blueprint(player)
         return
     end
 
-    function clearAllRequests()
-        for i = 1, 1000 do
-            player.opened.clear_request_slot(i)
-        end
+    -- Clear out all existing requests
+    for i = 1, REQUEST_SLOTS do
+        player.opened.clear_request_slot(i)
     end
-    pcall(clearAllRequests)
 
-    local lookup = {}
     local bp = blueprint.get_blueprint_entities()
+
+    if #bp > REQUEST_SLOTS then
+        -- BP has too many items to fit in the request set!
+        player.print('Blueprint has more required items than would fit in the logistic request slots of this chest')
+        return
+    end
+
+    -- Make a mapping from item name -> quantity needed
+    local lookup = {}
     for k, v in ipairs(bp) do
         lookup[v.name] = (lookup[v.name] or 0) + 1
     end
 
+    -- Set the requests in the chest
     local i = 1
     for k, v in pairs(lookup) do
         player.opened.set_request_slot({name = k, count = v}, i)
         i = i + 1
     end
-
-    informUserToReopenChest(player)
-end
-
-function informUserToReopenChest(player)
-    player.print('Logistics requests updated, re-open chest to see changes (Factorio bug)')
 end
 
 
--- 
+-- UI management
 function showOrHideUI(player, show, name, showFunc)
     local exists = player.gui.top[name] ~= nil;
     if exists ~= show then
@@ -340,10 +322,4 @@ function showRequestUI(myRow)
     myRow.add( { type = "button", name = Buttons.Requests.Blueprint, caption = "Blueprint" } )
 end
 
-if game ~= nil then
-    game.on_load(startup)
-elseif script ~= nil then
-    script.on_load(startup)
-end
-
-
+script.on_init(startup)

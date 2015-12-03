@@ -260,6 +260,11 @@ function requests_blueprint(player)
 
     local bp = blueprint.get_blueprint_entities()
 
+    if bp ~= nil then
+        player.print('Blueprint has no pattern. Please use blueprint with pattern.')
+        return
+    end
+    
     if #bp > REQUEST_SLOTS then
         -- BP has too many items to fit in the request set!
         player.print('Blueprint has more required items than would fit in the logistic request slots of this chest')

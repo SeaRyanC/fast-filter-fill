@@ -260,7 +260,7 @@ function requests_blueprint(player)
 
     local bp = blueprint.get_blueprint_entities()
 
-    if bp ~= nil then
+    if bp == nil then
         player.print('Blueprint has no pattern. Please use blueprint with pattern.')
         return
     end

@@ -327,4 +327,4 @@ function showRequestUI(myRow)
     myRow.add( { type = "button", name = Buttons.Requests.Blueprint, caption = "Blueprint" } )
 end
 
-script.on_init(startup)
+script.on_load(startup)

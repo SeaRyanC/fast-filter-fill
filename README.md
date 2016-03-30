@@ -2,7 +2,7 @@
 
 A Factorio mod for managing container filters, logistic requests, and maybe other stuff later. Supports all 0.12.x versions of Factorio
 
-## [Download Fast Filter Fill 0.6.1](https://github.com/SeaRyanC/fast-filter-fill/raw/master/releases/FastFilterFill_0.6.1.zip)
+## [Download Fast Filter Fill 0.6.1](https://github.com/SeaRyanC/fast-filter-fill/raw/master/releases/fast-filter-fill_0.6.1.zip)
 
 ## Quickly Set Container Filters
 
@@ -54,5 +54,5 @@ List of things to do:
 
 The following users have contributed their efforts to development of this plugin
  * Fuxy22
- * pschultz 
- * theit8514 
+ * pschultz
+ * theit8514

@@ -49,5 +49,10 @@ This button sets the logistic request values to the items required by a blueprin
 List of things to do:
 
  * Support all filterable containers. This requires a change in the Factorio code; see http://www.factorioforums.com/forum/viewtopic.php?f=28&t=17071
- * Remove the message indicating that logistic requester chests have to be re-opened; see http://www.factorioforums.com/forum/viewtopic.php?f=30&t=17196
- * Use a better method of determining the size of a container
+
+# Thanks
+
+The following users have contributed their efforts to development of this plugin
+ * Fuxy22
+ * pschultz 
+ * theit8514 

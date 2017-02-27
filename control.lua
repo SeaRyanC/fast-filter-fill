@@ -10,11 +10,6 @@ local requestUiElementName = "RequestRow"
 local Buttons = {}
 local dispatch = {}
 
--- How many logistic request slots a requester chest has. Replace
--- with a function once the API can tell us this
--- TODO: How to get the number of request slots?
-local REQUEST_SLOTS = 10
-
 -- Initializes the world
 function startup()
     script.on_event(defines.events.on_tick, checkOpened)
@@ -208,7 +203,7 @@ function requests_fill(player)
     local totalStackRequests = 0
 
     -- Add up how many total stacks we need here
-    for i = 1, REQUEST_SLOTS do
+    for i = 1, player.opened.request_slot_count do
         local item = player.opened.get_request_slot(i)
         if item ~= nil then
             totalStackRequests = totalStackRequests + item.count / game.item_prototypes[item.name].stack_size
@@ -217,7 +212,7 @@ function requests_fill(player)
 
     local factor = inventorySize / totalStackRequests
     -- Go back and re-set each thing according to its rounded-up stack size
-    for i = 1, REQUEST_SLOTS do
+    for i = 1, player.opened.request_slot_count do
         local item = player.opened.get_request_slot(i)
         if item ~= nil then
             stacksToRequest = math.ceil(item.count / game.item_prototypes[item.name].stack_size)
@@ -230,19 +225,19 @@ end
 function requests_blueprint(player)
     -- Get some blueprint details
     -- Note: 1 entry per item
-    -- game.local_player.opened.get_inventory(1)[1].get_blueprint_entities()[5].name
+    -- game.local_player.opened.get_output_inventory()[1].get_blueprint_entities()[5].name
     local blueprint = nil;
     if player.cursor_stack.valid_for_read and player.cursor_stack.name == "blueprint" then
         blueprint = player.cursor_stack;
-    elseif player.opened.get_inventory(1)[1].valid_for_read and player.opened.get_inventory(1)[1].name == "blueprint" then
-        blueprint = player.opened.get_inventory(1)[1];
+    elseif player.opened.get_output_inventory()[1].valid_for_read and player.opened.get_output_inventory()[1].name == "blueprint" then
+        blueprint = player.opened.get_output_inventory()[1];
     else
         player.print('You must be holding a blueprint or have a blueprint in the first chest slot to use this button')
         return
     end
 
     -- Clear out all existing requests
-    for i = 1, REQUEST_SLOTS do
+    for i = 1, player.opened.request_slot_count do
         player.opened.clear_request_slot(i)
     end
 
@@ -253,7 +248,7 @@ function requests_blueprint(player)
         return
     end
 
-    if #bp > REQUEST_SLOTS then
+    if #bp > player.opened.request_slot_count then
         -- BP has too many items to fit in the request set!
         player.print('Blueprint has more required items than would fit in the logistic request slots of this chest')
         return

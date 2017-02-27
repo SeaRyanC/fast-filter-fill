@@ -264,7 +264,7 @@ function requests_blueprint(player)
         player.print('Blueprint has no pattern. Please use blueprint with pattern.')
         return
     end
-    
+
     if #bp > REQUEST_SLOTS then
         -- BP has too many items to fit in the request set!
         player.print('Blueprint has more required items than would fit in the logistic request slots of this chest')
@@ -305,7 +305,7 @@ end
 
 function showFilterUI(myRow)
     myRow.add( { type = "button", caption = "Filters: " } )
-    
+
     myRow.add( { type = "button", name = Buttons.Filter.All, caption = "Fill All" } )
     myRow.add( { type = "button", name = Buttons.Filter.Right, caption = "Fill Right" } )
     myRow.add( { type = "button", name = Buttons.Filter.Down, caption = "Fill Down" } )
@@ -319,7 +319,7 @@ end
 
 function showRequestUI(myRow)
     myRow.add( { type = "button", caption = "Requests: " } )
-    
+
     myRow.add( { type = "button", name = Buttons.Requests.x2, caption = "x2" } )
     myRow.add( { type = "button", name = Buttons.Requests.x5, caption = "x5" } )
     myRow.add( { type = "button", name = Buttons.Requests.x10, caption = "x10" } )

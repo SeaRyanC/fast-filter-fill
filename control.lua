@@ -160,8 +160,7 @@ end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) below it
 function filter_fillDown(player)
-    local op = player.opened.get_output_inventory()
-    local size = #op
+    local size = #player.opened.get_output_inventory()
 
     local rows = math.ceil(size / INVENTORY_COLUMNS)
     for c = 1, INVENTORY_COLUMNS do
@@ -177,8 +176,6 @@ function filter_fillDown(player)
 end
 
 function multiply_filter(player, factor)
-
-    local size = #player.opened.get_output_inventory()
     for i = 1, player.opened.request_slot_count do
         local existing = player.opened.get_request_slot(i)
         if existing ~= nil then

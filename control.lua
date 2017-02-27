@@ -85,7 +85,7 @@ end
 -- Gets the name of the item at the given position, or nil if there
 -- is no item at that position
 function getItemAtPosition(player, n)
-    local inv = player.opened.get_inventory(1)
+    local inv = player.opened.get_output_inventory()
     local isEmpty = not inv[n].valid_for_read
     if isEmpty then
         return nil
@@ -105,20 +105,10 @@ function getItemOrFilterAtPosition(player, n)
     end
 end
 
--- Set the filter of the opened UI to the given value, or clear
--- it if the given value is nil
-function setFilter(player, value, pos)
-    if value then
-        player.opened.set_filter(pos, value)
-    else
-        player.opened.set_filter(pos, nil)
-    end
-end
-
 -- Filtering: Clear all filters in the opened container
 function filter_clearAll(player)
-    local op = player.opened;
-    local size = #player.opened.get_inventory(1)
+    local op = player.opened.get_output_inventory();
+    local size = #op
     for i = 1, size do
         op.set_filter(i, nil)
     end
@@ -127,11 +117,11 @@ end
 -- Filtering: Set the filters of the opened container to the
 -- contents of each cell
 function filter_setAll(player)
-    local op = player.opened;
-    local size = #player.opened.get_inventory(1)
+    local op = player.opened.get_output_inventory();
+    local size = #op
     for i = 1, size do
         local desired = getItemAtPosition(player, i)
-        setFilter(player, desired, i)
+        op.set_filter(i, desired)
     end
 end
 
@@ -141,26 +131,25 @@ end
 function filter_fillAll(player)
     -- Get the contents of the player's cursor stack, or the first cell
     local desired = (player.cursor_stack.valid_for_read and player.cursor_stack.name) or getItemOrFilterAtPosition(player, 1)
-    local size = #player.opened.get_inventory(1)
-    local op = player.opened;
+    local op = player.opened.get_output_inventory();
+    local size = #op
     for i = 1, size do
         local current = getItemAtPosition(player, i)
         if current and desired and current ~= desired then
             player.print({"", 'Skipped setting a filter on the cell occupied by ', {'item-name.' .. current}})
         else
-            if desired then
-                op.set_filter(i, desired)
-            else
-                op.set_filter(i, nil)
-            end
+            op.set_filter(i, desired or nil)
         end
     end
 end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) to the right of it
 function filter_fillRight(player)
-    local columns = 10
-    local size = #player.opened.get_inventory(1)
+    local columns = 10 -- TODO: Figure out generic way to determine columns
+
+    local op = player.opened.get_output_inventory()
+    local size = #op
+
     local rows = math.ceil(size / columns)
     for r = 1, rows do
         local desired = getItemOrFilterAtPosition(player, 1 + (r - 1) * columns)
@@ -168,7 +157,7 @@ function filter_fillRight(player)
             local i = c + (r - 1) * columns
             if i <= size then
                 desired = getItemAtPosition(player, i) or desired
-                setFilter(player, desired, i)
+                op.set_filter(i, desired)
             end
         end
     end
@@ -176,8 +165,11 @@ end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) below it
 function filter_fillDown(player)
-    local columns = 10
-    local size = #player.opened.get_inventory(1)
+    local columns = 10 -- TODO: Figure out generic way to determine columns
+
+    local op = player.opened.get_output_inventory()
+    local size = #op
+
     local rows = math.ceil(size / columns)
     for c = 1, columns do
         local desired = getItemOrFilterAtPosition(player, c)
@@ -185,15 +177,16 @@ function filter_fillDown(player)
             local i = c + (r - 1) * columns
             if i <= size then
                 desired = getItemAtPosition(player, i) or desired
-                setFilter(player, desired, c + (r - 1) * columns)
+                op.set_filter(c + (r - 1) * columns, desired)
             end
         end
     end
 end
 
 function multiply_filter(player, factor)
-    local size = #player.opened.get_inventory(1)
-    for i = 1, REQUEST_SLOTS do
+
+    local size = #player.opened.get_output_inventory()
+    for i = 1, player.opened.request_slot_count do
         local existing = player.opened.get_request_slot(i)
         if existing ~= nil then
             player.opened.set_request_slot({ name =  existing.name, count = math.floor(existing.count * factor) }, i)
@@ -211,7 +204,7 @@ function requests_x10(player)
     multiply_filter(player, 10)
 end
 function requests_fill(player)
-    local inv = player.opened.get_inventory(1)
+    local inv = player.opened.get_output_inventory()
     local inventorySize = #inv
 
     local totalStackRequests = 0

@@ -5,5 +5,7 @@
   "author": "SeaRyanC",
   "contact": "http://github.com/SeaRyanC/",
   "homepage": "http://github.com/SeaRyanC/fast-filter-fill",
-  "description": "Quickly duplicate filter settings in Cargo Wagons and other filterable containers"
+  "description": "Quickly duplicate filter settings in Cargo Wagons and other filterable containers",
+  "factorio_version": "0.14",
+  "dependencies": ["base >= 0.14.0"]
 }

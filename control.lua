@@ -109,9 +109,9 @@ end
 -- it if the given value is nil
 function setFilter(player, value, pos)
     if value then
-        player.opened.set_filter(value, pos)
+        player.opened.set_filter(pos, value)
     else
-        player.opened.clear_filter(pos)
+        player.opened.set_filter(pos, nil)
     end
 end
 
@@ -120,7 +120,7 @@ function filter_clearAll(player)
     local op = player.opened;
     local size = #player.opened.get_inventory(1)
     for i = 1, size do
-        op.clear_filter(i)
+        op.set_filter(i, nil)
     end
 end
 
@@ -149,9 +149,9 @@ function filter_fillAll(player)
             player.print({"", 'Skipped setting a filter on the cell occupied by ', {'item-name.' .. current}})
         else
             if desired then
-                op.set_filter(desired, i)
+                op.set_filter(i, desired)
             else
-                op.clear_filter(i)
+                op.set_filter(i, nil)
             end
         end
     end

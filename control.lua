@@ -52,14 +52,12 @@ function initButtons()
     script.on_event(defines.events.on_gui_click, handleButton)
 end
 
--- TODO: Add Car, Tank when those get API support (or we get API support for detecting this programatically)
 function canFilter(obj)
-    return obj.type == "cargo-wagon"
+    return obj.get_output_inventory() ~= nil and obj.get_output_inventory().supports_filters()
 end
 
--- TODO How to make this better?
 function canRequest(obj)
-    return obj.name == "logistic-chest-requester"
+    return obj.request_slot_count > 0
 end
 
 -- See if an applicable container is opened and show/hide the UI accordingly.

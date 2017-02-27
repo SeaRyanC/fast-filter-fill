@@ -1,5 +1,7 @@
 require "util"
 
+local INVENTORY_COLUMNS = 10
+
 -- Name of the row headers we put in the UI
 local filterUiElementName = "FilterFillRow"
 local requestUiElementName = "RequestRow"
@@ -145,16 +147,14 @@ end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) to the right of it
 function filter_fillRight(player)
-    local columns = 10 -- TODO: Figure out generic way to determine columns
-
     local op = player.opened.get_output_inventory()
     local size = #op
 
-    local rows = math.ceil(size / columns)
+    local rows = math.ceil(size / INVENTORY_COLUMNS)
     for r = 1, rows do
-        local desired = getItemOrFilterAtPosition(player, 1 + (r - 1) * columns)
-        for c = 1, columns do
-            local i = c + (r - 1) * columns
+        local desired = getItemOrFilterAtPosition(player, 1 + (r - 1) * INVENTORY_COLUMNS)
+        for c = 1, INVENTORY_COLUMNS do
+            local i = c + (r - 1) * INVENTORY_COLUMNS
             if i <= size then
                 desired = getItemAtPosition(player, i) or desired
                 op.set_filter(i, desired)
@@ -165,19 +165,17 @@ end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) below it
 function filter_fillDown(player)
-    local columns = 10 -- TODO: Figure out generic way to determine columns
-
     local op = player.opened.get_output_inventory()
     local size = #op
 
-    local rows = math.ceil(size / columns)
-    for c = 1, columns do
+    local rows = math.ceil(size / INVENTORY_COLUMNS)
+    for c = 1, INVENTORY_COLUMNS do
         local desired = getItemOrFilterAtPosition(player, c)
         for r = 1, rows do
-            local i = c + (r - 1) * columns
+            local i = c + (r - 1) * INVENTORY_COLUMNS
             if i <= size then
                 desired = getItemAtPosition(player, i) or desired
-                op.set_filter(c + (r - 1) * columns, desired)
+                op.set_filter(c + (r - 1) * INVENTORY_COLUMNS, desired)
             end
         end
     end

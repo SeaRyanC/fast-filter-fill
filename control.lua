@@ -1,4 +1,3 @@
-require "defines"
 require "util"
 
 -- Name of the row headers we put in the UI

@@ -76,7 +76,7 @@ function checkOpened()
         return
     end
 
-    for i, player in ipairs(game.players) do
+    for _, player in pairs(game.players) do
         showOrHideFilterUI(player, player.opened ~= nil and canFilter(player.opened))
         showOrHideRequestUI(player, player.opened ~= nil and canRequest(player.opened))
     end

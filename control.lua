@@ -1,5 +1,6 @@
-require "defines"
 require "util"
+
+local INVENTORY_COLUMNS = 10
 
 -- Name of the row headers we put in the UI
 local filterUiElementName = "FilterFillRow"
@@ -8,11 +9,6 @@ local requestUiElementName = "RequestRow"
 -- Button click dispatching
 local Buttons = {}
 local dispatch = {}
-
--- How many logistic request slots a requester chest has. Replace
--- with a function once the API can tell us this
--- TODO: How to get the number of request slots?
-local REQUEST_SLOTS = 10
 
 -- Initializes the world
 function startup()
@@ -53,14 +49,12 @@ function initButtons()
     script.on_event(defines.events.on_gui_click, handleButton)
 end
 
--- TODO: Add Car, Tank when those get API support (or we get API support for detecting this programatically)
 function canFilter(obj)
-    return obj.type == "cargo-wagon"
+    return obj.get_output_inventory() ~= nil and obj.get_output_inventory().supports_filters()
 end
 
--- TODO How to make this better?
 function canRequest(obj)
-    return obj.name == "logistic-chest-requester"
+    return obj.request_slot_count > 0
 end
 
 -- See if an applicable container is opened and show/hide the UI accordingly.
@@ -79,7 +73,7 @@ function checkOpened()
         return
     end
 
-    for i, player in ipairs(game.players) do
+    for _, player in pairs(game.players) do
         showOrHideFilterUI(player, player.opened ~= nil and canFilter(player.opened))
         showOrHideRequestUI(player, player.opened ~= nil and canRequest(player.opened))
     end
@@ -88,7 +82,7 @@ end
 -- Gets the name of the item at the given position, or nil if there
 -- is no item at that position
 function getItemAtPosition(player, n)
-    local inv = player.opened.get_inventory(1)
+    local inv = player.opened.get_output_inventory()
     local isEmpty = not inv[n].valid_for_read
     if isEmpty then
         return nil
@@ -108,33 +102,23 @@ function getItemOrFilterAtPosition(player, n)
     end
 end
 
--- Set the filter of the opened UI to the given value, or clear
--- it if the given value is nil
-function setFilter(player, value, pos)
-    if value then
-        player.opened.set_filter(value, pos)
-    else
-        player.opened.clear_filter(pos)
-    end
-end
-
 -- Filtering: Clear all filters in the opened container
 function filter_clearAll(player)
-    local op = player.opened;
-    local size = #player.opened.get_inventory(1)
+    local op = player.opened.get_output_inventory();
+    local size = #op
     for i = 1, size do
-        op.clear_filter(i)
+        op.set_filter(i, nil)
     end
 end
 
 -- Filtering: Set the filters of the opened container to the
 -- contents of each cell
 function filter_setAll(player)
-    local op = player.opened;
-    local size = #player.opened.get_inventory(1)
+    local op = player.opened.get_output_inventory();
+    local size = #op
     for i = 1, size do
         local desired = getItemAtPosition(player, i)
-        setFilter(player, desired, i)
+        op.set_filter(i, desired)
     end
 end
 
@@ -144,34 +128,31 @@ end
 function filter_fillAll(player)
     -- Get the contents of the player's cursor stack, or the first cell
     local desired = (player.cursor_stack.valid_for_read and player.cursor_stack.name) or getItemOrFilterAtPosition(player, 1)
-    local size = #player.opened.get_inventory(1)
-    local op = player.opened;
+    local op = player.opened.get_output_inventory();
+    local size = #op
     for i = 1, size do
         local current = getItemAtPosition(player, i)
         if current and desired and current ~= desired then
             player.print({"", 'Skipped setting a filter on the cell occupied by ', {'item-name.' .. current}})
         else
-            if desired then
-                op.set_filter(desired, i)
-            else
-                op.clear_filter(i)
-            end
+            op.set_filter(i, desired or nil)
         end
     end
 end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) to the right of it
 function filter_fillRight(player)
-    local columns = 10
-    local size = #player.opened.get_inventory(1)
-    local rows = math.ceil(size / columns)
+    local op = player.opened.get_output_inventory()
+    local size = #op
+
+    local rows = math.ceil(size / INVENTORY_COLUMNS)
     for r = 1, rows do
-        local desired = getItemOrFilterAtPosition(player, 1 + (r - 1) * columns)
-        for c = 1, columns do
-            local i = c + (r - 1) * columns
+        local desired = getItemOrFilterAtPosition(player, 1 + (r - 1) * INVENTORY_COLUMNS)
+        for c = 1, INVENTORY_COLUMNS do
+            local i = c + (r - 1) * INVENTORY_COLUMNS
             if i <= size then
                 desired = getItemAtPosition(player, i) or desired
-                setFilter(player, desired, i)
+                op.set_filter(i, desired)
             end
         end
     end
@@ -179,24 +160,23 @@ end
 
 -- Filtering: Copies the filter settings of each cell to the cell(s) below it
 function filter_fillDown(player)
-    local columns = 10
-    local size = #player.opened.get_inventory(1)
-    local rows = math.ceil(size / columns)
-    for c = 1, columns do
+    local size = #player.opened.get_output_inventory()
+
+    local rows = math.ceil(size / INVENTORY_COLUMNS)
+    for c = 1, INVENTORY_COLUMNS do
         local desired = getItemOrFilterAtPosition(player, c)
         for r = 1, rows do
-            local i = c + (r - 1) * columns
+            local i = c + (r - 1) * INVENTORY_COLUMNS
             if i <= size then
                 desired = getItemAtPosition(player, i) or desired
-                setFilter(player, desired, c + (r - 1) * columns)
+                op.set_filter(c + (r - 1) * INVENTORY_COLUMNS, desired)
             end
         end
     end
 end
 
 function multiply_filter(player, factor)
-    local size = #player.opened.get_inventory(1)
-    for i = 1, REQUEST_SLOTS do
+    for i = 1, player.opened.request_slot_count do
         local existing = player.opened.get_request_slot(i)
         if existing ~= nil then
             player.opened.set_request_slot({ name =  existing.name, count = math.floor(existing.count * factor) }, i)
@@ -214,13 +194,13 @@ function requests_x10(player)
     multiply_filter(player, 10)
 end
 function requests_fill(player)
-    local inv = player.opened.get_inventory(1)
+    local inv = player.opened.get_output_inventory()
     local inventorySize = #inv
 
     local totalStackRequests = 0
 
     -- Add up how many total stacks we need here
-    for i = 1, REQUEST_SLOTS do
+    for i = 1, player.opened.request_slot_count do
         local item = player.opened.get_request_slot(i)
         if item ~= nil then
             totalStackRequests = totalStackRequests + item.count / game.item_prototypes[item.name].stack_size
@@ -229,7 +209,7 @@ function requests_fill(player)
 
     local factor = inventorySize / totalStackRequests
     -- Go back and re-set each thing according to its rounded-up stack size
-    for i = 1, REQUEST_SLOTS do
+    for i = 1, player.opened.request_slot_count do
         local item = player.opened.get_request_slot(i)
         if item ~= nil then
             stacksToRequest = math.ceil(item.count / game.item_prototypes[item.name].stack_size)
@@ -242,19 +222,19 @@ end
 function requests_blueprint(player)
     -- Get some blueprint details
     -- Note: 1 entry per item
-    -- game.local_player.opened.get_inventory(1)[1].get_blueprint_entities()[5].name
+    -- game.local_player.opened.get_output_inventory()[1].get_blueprint_entities()[5].name
     local blueprint = nil;
     if player.cursor_stack.valid_for_read and player.cursor_stack.name == "blueprint" then
         blueprint = player.cursor_stack;
-    elseif player.opened.get_inventory(1)[1].valid_for_read and player.opened.get_inventory(1)[1].name == "blueprint" then
-        blueprint = player.opened.get_inventory(1)[1];
+    elseif player.opened.get_output_inventory()[1].valid_for_read and player.opened.get_output_inventory()[1].name == "blueprint" then
+        blueprint = player.opened.get_output_inventory()[1];
     else
         player.print('You must be holding a blueprint or have a blueprint in the first chest slot to use this button')
         return
     end
 
     -- Clear out all existing requests
-    for i = 1, REQUEST_SLOTS do
+    for i = 1, player.opened.request_slot_count do
         player.opened.clear_request_slot(i)
     end
 
@@ -264,8 +244,8 @@ function requests_blueprint(player)
         player.print('Blueprint has no pattern. Please use blueprint with pattern.')
         return
     end
-    
-    if #bp > REQUEST_SLOTS then
+
+    if #bp > player.opened.request_slot_count then
         -- BP has too many items to fit in the request set!
         player.print('Blueprint has more required items than would fit in the logistic request slots of this chest')
         return
@@ -305,7 +285,7 @@ end
 
 function showFilterUI(myRow)
     myRow.add( { type = "button", caption = "Filters: " } )
-    
+
     myRow.add( { type = "button", name = Buttons.Filter.All, caption = "Fill All" } )
     myRow.add( { type = "button", name = Buttons.Filter.Right, caption = "Fill Right" } )
     myRow.add( { type = "button", name = Buttons.Filter.Down, caption = "Fill Down" } )
@@ -319,7 +299,7 @@ end
 
 function showRequestUI(myRow)
     myRow.add( { type = "button", caption = "Requests: " } )
-    
+
     myRow.add( { type = "button", name = Buttons.Requests.x2, caption = "x2" } )
     myRow.add( { type = "button", name = Buttons.Requests.x5, caption = "x5" } )
     myRow.add( { type = "button", name = Buttons.Requests.x10, caption = "x10" } )

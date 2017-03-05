@@ -56,3 +56,4 @@ The following users have contributed their efforts to development of this plugin
  * Fuxy22
  * pschultz 
  * theit8514 
+ * [Keryja](https://github.com/keryja)
